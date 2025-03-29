@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Com1Software/go-dbase/dbase"
 	"golang.org/x/text/encoding/charmap"
@@ -20,14 +20,66 @@ type List struct {
 func main() {
 	TableCheck()
 	a := app.New()
-	w := a.NewWindow("Two Buttons with Memo")
+	w := a.NewWindow("Shopping List")
+
+	table, err := dbase.OpenTable(&dbase.Config{
+		Filename:   "LIST.DBF",
+		TrimSpaces: true,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer table.Close()
+	recno := 0
+	for !table.EOF() {
+		row, err := table.Next()
+		if err != nil {
+			panic(err)
+		}
+		field := row.Field(0)
+		if field == nil {
+			panic("Field not found")
+		}
+		s := fmt.Sprintf("%v", field.GetValue())
+		fmt.Println(s)
+		recno++
+
+	}
 	memo := widget.NewEntry()
 	memo.SetPlaceHolder("Enter your memo here...")
 	memo.MultiLine = true
 	memo.Resize(fyne.NewSize(400, 100))
 
-	helloButton := widget.NewButton("Say Hello", func() {
-		dialog.ShowInformation("Hello", "Hello, "+memo.Text, w)
+	helloButton := widget.NewButton("Add Item", func() {
+
+		table, err := dbase.OpenTable(&dbase.Config{
+			Filename:   "LIST.DBF",
+			TrimSpaces: true,
+		})
+		if err != nil {
+			panic(err)
+		}
+		defer table.Close()
+		recno := "0"
+		rn, _ := strconv.Atoi(recno)
+		err = table.GoTo(uint32(rn))
+		if err != nil {
+			panic(err)
+		}
+		row, err := table.Row()
+		if err != nil {
+			panic(err)
+		}
+		err = row.FieldByName("ITEM").SetValue(memo.Text)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		err = row.Write()
+		if err != nil {
+			fmt.Println(err.Error())
+
+		}
+
 	})
 	exitButton := widget.NewButton("Exit", func() {
 		os.Exit(0)
