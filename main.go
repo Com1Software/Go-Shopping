@@ -1,59 +1,49 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"math/rand"
-	"net"
-	"net/http"
-	"runtime"
-	"time"
+	"os"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/widget"
 )
 
-func getPing(w http.ResponseWriter, r *http.Request) {
-	clientIP := r.RemoteAddr
-	ip, _, _ := net.SplitHostPort(clientIP)
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Your IP is: %s", ip)
-}
-
-func getHelp(w http.ResponseWriter, r *http.Request) {
-	rand.Seed(time.Now().UnixNano())
-	w.WriteHeader(http.StatusOK)
-	port := GetOutboundPort()
-	xip := fmt.Sprintf("%s", GetOutboundIP())
-	fmt.Fprintf(w, "Help\n")
-	fmt.Fprintf(w, "http://"+xip+":"+port+"/help - returns this help\n")
-	fmt.Fprintf(w, "http://"+xip+":"+port+"/ping - returns the remote IP address\n")
-
-}
-func handleRequests(port string) {
-	http.Handle("/ping", http.HandlerFunc(getPing))
-	http.Handle("/help", http.HandlerFunc(getHelp))
-	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-
 func main() {
-	port := GetOutboundPort()
-	fmt.Printf("Operating System : %s\n", runtime.GOOS)
-	xip := fmt.Sprintf("%s", GetOutboundIP())
-	fmt.Println("Listening on " + xip + ":" + port)
-	fmt.Println("http://" + xip + ":" + port + "/help")
+	// Create the application
+	a := app.New()
 
-	handleRequests(port)
-}
+	// Create the main window
+	w := a.NewWindow("Two Buttons with Memo")
 
-func GetOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP
-}
+	// Create the text memo field with multiline and larger height
+	memo := widget.NewEntry()
+	memo.SetPlaceHolder("Enter your memo here...")
+	memo.MultiLine = true               // Enable multiline for larger text fields
+	memo.Resize(fyne.NewSize(400, 100)) // Adjust the height (4x the default)
 
-func GetOutboundPort() string {
-	port := "8080"
-	return port
+	// Create the "Say Hello" button
+	helloButton := widget.NewButton("Say Hello", func() {
+		// Display the value from the memo field in the dialog box
+		dialog.ShowInformation("Hello", "Hello, "+memo.Text, w)
+	})
+
+	// Create the "Exit" button
+	exitButton := widget.NewButton("Exit", func() {
+		os.Exit(0)
+	})
+
+	// Set the content of the window
+	w.SetContent(container.NewVBox(
+		memo,        // Add the memo field
+		helloButton, // Add the "Say Hello" button
+		exitButton,  // Add the "Exit" button
+	))
+
+	// Resize the window to make it larger
+	w.Resize(fyne.NewSize(400, 300))
+
+	// Show the window and run the application
+	w.ShowAndRun()
 }
