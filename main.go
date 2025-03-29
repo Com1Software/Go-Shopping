@@ -11,18 +11,21 @@ import (
 )
 
 func getPing(w http.ResponseWriter, r *http.Request) {
-	clientIP := r.RemoteAddr // Get the client's IP address and port
-	// If the IP address contains the port (e.g., "127.0.0.1:8080"), strip it
+	clientIP := r.RemoteAddr
 	ip, _, _ := net.SplitHostPort(clientIP)
-
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Your IP is: %s", ip) // Return the IP address
+	fmt.Fprintf(w, "Your IP is: %s", ip)
 }
 
 func getHelp(w http.ResponseWriter, r *http.Request) {
 	rand.Seed(time.Now().UnixNano())
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Help ")
+	port := GetOutboundPort()
+	xip := fmt.Sprintf("%s", GetOutboundIP())
+	fmt.Fprintf(w, "Help\n")
+	fmt.Fprintf(w, "http://"+xip+":"+port+"/help - returns this help\n")
+	fmt.Fprintf(w, "http://"+xip+":"+port+"/ping - returns the remote IP address\n")
+
 }
 func handleRequests(port string) {
 	http.Handle("/ping", http.HandlerFunc(getPing))
@@ -31,7 +34,7 @@ func handleRequests(port string) {
 }
 
 func main() {
-	port := "8080"
+	port := GetOutboundPort()
 	fmt.Printf("Operating System : %s\n", runtime.GOOS)
 	xip := fmt.Sprintf("%s", GetOutboundIP())
 	fmt.Println("Listening on " + xip + ":" + port)
@@ -48,4 +51,9 @@ func GetOutboundIP() net.IP {
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	return localAddr.IP
+}
+
+func GetOutboundPort() string {
+	port := "8080"
+	return port
 }
