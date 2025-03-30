@@ -72,6 +72,8 @@ func main() {
 			obj.(*widget.Label).SetText(items[id])
 		},
 	)
+	scrollableList := container.NewScroll(list)
+	scrollableList.SetMinSize(fyne.NewSize(600, 400)) // Set the minimum size
 
 	// Entry for new item
 	memo := widget.NewEntry()
@@ -109,7 +111,8 @@ func main() {
 		}
 		memo.SetText("") // Clear entry field
 		loadItems()      // Refresh items
-		list.Refresh()   // Update list view
+		list.Resize(fyne.NewSize(600, 400))
+		list.Refresh() // Update list view
 	})
 
 	// Exit button
@@ -119,7 +122,7 @@ func main() {
 
 	// Layout
 	content := container.NewVBox(
-		list,
+		scrollableList,
 		memo,
 		addButton,
 		exitButton,
