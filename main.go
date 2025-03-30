@@ -22,6 +22,7 @@ func main() {
 	a := app.New()
 	w := a.NewWindow("Shopping List")
 
+	// Open the table
 	table, err := dbase.OpenTable(&dbase.Config{
 		Filename:   "LIST.DBF",
 		TrimSpaces: true,
@@ -30,27 +31,54 @@ func main() {
 		panic(err)
 	}
 	defer table.Close()
-	recno := 0
-	for !table.EOF() {
-		row, err := table.Next()
-		if err != nil {
-			panic(err)
-		}
-		field := row.Field(0)
-		if field == nil {
-			panic("Field not found")
-		}
-		s := fmt.Sprintf("%v", field.GetValue())
-		fmt.Println(s)
-		recno++
 
+	// Create a slice to hold the items
+	var items []string
+	loadItems := func() {
+		items = []string{}   // Clear existing items
+		err := table.GoTo(0) // Start from the first record
+		if err != nil {
+			fmt.Println("Error navigating to the first record:", err)
+			return
+		}
+		for {
+			row, err := table.Next()
+			if err != nil {
+				fmt.Println("Error reading row:", err)
+				break
+			}
+			field := row.FieldByName("ITEM")
+			if field != nil {
+				items = append(items, fmt.Sprintf("%v", field.GetValue()))
+			}
+			if table.EOF() {
+				break // Exit when reaching the end of the file
+			}
+		}
 	}
+
+	// Load initial items
+	loadItems()
+
+	// Create a list widget
+	list := widget.NewList(
+		func() int {
+			return len(items)
+		},
+		func() fyne.CanvasObject {
+			return widget.NewLabel("")
+		},
+		func(id widget.ListItemID, obj fyne.CanvasObject) {
+			obj.(*widget.Label).SetText(items[id])
+		},
+	)
+
+	// Entry for new item
 	memo := widget.NewEntry()
 	memo.SetPlaceHolder("Enter your memo here...")
-	memo.MultiLine = true
-	memo.Resize(fyne.NewSize(400, 100))
 
-	helloButton := widget.NewButton("Add Item", func() {
+	// Button to add a new item
+	addButton := widget.NewButton("Add Item", func() {
 
 		table, err := dbase.OpenTable(&dbase.Config{
 			Filename:   "LIST.DBF",
@@ -79,26 +107,35 @@ func main() {
 			fmt.Println(err.Error())
 
 		}
-
+		memo.SetText("") // Clear entry field
+		loadItems()      // Refresh items
+		list.Refresh()   // Update list view
 	})
+
+	// Exit button
 	exitButton := widget.NewButton("Exit", func() {
 		os.Exit(0)
 	})
-	w.SetContent(container.NewVBox(
+
+	// Layout
+	content := container.NewVBox(
+		list,
 		memo,
-		helloButton,
+		addButton,
 		exitButton,
-	))
-	w.Resize(fyne.NewSize(400, 300))
+	)
+
+	w.SetContent(content)
+	w.Resize(fyne.NewSize(400, 400))
 	w.ShowAndRun()
 }
 
 func TableCheck() {
 	tt := "LIST.DBF"
 	if _, err := os.Stat(tt); err == nil {
-
+		// File exists, do nothing
 	} else {
-
+		// Create a new DBF file
 		file, err := dbase.NewTable(
 			dbase.FoxProAutoincrement,
 			&dbase.Config{
@@ -133,13 +170,10 @@ func TableCheck() {
 			file.Header().RecordsCount(),
 			file.Header().FileSize(),
 		)
-
 	}
-
 }
 
 func icolumns() []*dbase.Column {
-
 	itemCol, err := dbase.NewColumn("ITEM", dbase.Varchar, 80, 0, false)
 	if err != nil {
 		panic(err)
