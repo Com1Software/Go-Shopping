@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Com1Software/go-dbase/dbase"
 	"golang.org/x/text/encoding/charmap"
@@ -72,6 +73,52 @@ func main() {
 			obj.(*widget.Label).SetText(items[id])
 		},
 	)
+
+	list.OnSelected = func(id widget.ListItemID) {
+		selectedItem := items[id]
+
+		// Create a dialog to edit the item
+		entry := widget.NewEntry()
+		entry.SetText(selectedItem)
+
+		dialog.ShowCustomConfirm(
+			"Edit Item",
+			"Save",
+			"Cancel",
+			container.NewVBox(entry),
+			func(confirm bool) {
+				if confirm {
+					newValue := entry.Text
+
+					// Update the DBF file
+					err := table.GoTo(uint32(id)) // Navigate to the selected record
+					if err != nil {
+						fmt.Println("Error navigating to record:", err)
+						return
+					}
+					row, err := table.Row()
+					if err != nil {
+						fmt.Println("Error retrieving row:", err)
+						return
+					}
+					err = row.FieldByName("ITEM").SetValue(newValue)
+					if err != nil {
+						fmt.Println("Error updating value:", err)
+					}
+					err = row.Write()
+					if err != nil {
+						fmt.Println("Error saving changes:", err)
+					}
+
+					// Refresh the items list
+					loadItems()
+					list.Refresh()
+				}
+			},
+			w,
+		)
+	}
+
 	scrollableList := container.NewScroll(list)
 	scrollableList.SetMinSize(fyne.NewSize(600, 400)) // Set the minimum size
 
@@ -81,7 +128,6 @@ func main() {
 
 	// Button to add a new item
 	addButton := widget.NewButton("Add Item", func() {
-
 		table, err := dbase.OpenTable(&dbase.Config{
 			Filename:   "LIST.DBF",
 			TrimSpaces: true,
@@ -107,7 +153,6 @@ func main() {
 		err = row.Write()
 		if err != nil {
 			fmt.Println(err.Error())
-
 		}
 		memo.SetText("") // Clear entry field
 		loadItems()      // Refresh items
