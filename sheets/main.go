@@ -14,7 +14,6 @@ func main() {
 	ctx := context.Background()
 
 	// Load the service account key file
-	// b, err := os.ReadFile("path/to/your-service-account-key.json")
 	b, err := os.ReadFile("C:/Users/infor/Documents/dependable-glow-836-65f6fa83b621.json")
 	if err != nil {
 		log.Fatalf("Unable to read service account key file: %v", err)
@@ -33,8 +32,8 @@ func main() {
 	}
 
 	// Spreadsheet ID and range
-	spreadsheetId := ""
-	readRange := "To do!A4:C4"
+	spreadsheetId := "1uZTXl8XP6VaZII2wtG0oMZFLyEaGqRw7nuEVAon3iRQ"
+	readRange := "ShoppingList!A1:A99"
 
 	// Read data
 	resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
