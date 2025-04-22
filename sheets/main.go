@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
 	"golang.org/x/oauth2/google"
@@ -70,10 +71,75 @@ func main() {
 		}
 	})
 
+	// Button to add a new item to the shopping list using a dialog box
+	addItemButton := widget.NewButton("Add Item to Shopping List", func() {
+		// Create a new entry field for the dialog
+		newItemEntry := widget.NewEntry()
+
+		// Create the dialog
+		dialogBox := dialog.NewCustomConfirm(
+			"Add Item",
+			"Add",
+			"Cancel",
+			container.NewVBox(
+				widget.NewLabel("Enter the item to add:"),
+				newItemEntry,
+			),
+			func(confirmed bool) {
+				if confirmed {
+					ctx := context.Background()
+
+					// Load the service account key file
+					b, err := os.ReadFile("C:/Users/infor/Documents/dependable-glow-836-65f6fa83b621.json")
+					if err != nil {
+						dataDisplay.SetText(fmt.Sprintf("Error reading service account key file: %v", err))
+						return
+					}
+
+					// Authenticate and create a Sheets service
+					config, err := google.JWTConfigFromJSON(b, sheets.SpreadsheetsScope)
+					if err != nil {
+						dataDisplay.SetText(fmt.Sprintf("Error parsing service account key file: %v", err))
+						return
+					}
+
+					client := config.Client(ctx)
+					srv, err := sheets.New(client)
+					if err != nil {
+						dataDisplay.SetText(fmt.Sprintf("Error creating Sheets client: %v", err))
+						return
+					}
+
+					// Append data to the spreadsheet
+					spreadsheetId := "1uZTXl8XP6VaZII2wtG0oMZFLyEaGqRw7nuEVAon3iRQ"
+					writeRange := "ShoppingList!A:A"
+					valueRange := &sheets.ValueRange{
+						Values: [][]interface{}{
+							{newItemEntry.Text},
+						},
+					}
+					_, err = srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, valueRange).ValueInputOption("RAW").Do()
+					if err != nil {
+						dataDisplay.SetText(fmt.Sprintf("Error adding item to spreadsheet: %v", err))
+						return
+					}
+
+					// Confirm item added
+					dataDisplay.SetText(fmt.Sprintf("Added '%s' to the shopping list!", newItemEntry.Text))
+				}
+			},
+			w,
+		)
+
+		// Show the dialog
+		dialogBox.Show()
+	})
+
 	// Set up the layout
 	w.SetContent(container.NewVBox(
 		dataDisplay,
 		loadDataButton,
+		addItemButton,
 		widget.NewButton("Exit", func() { os.Exit(0) }),
 	))
 
